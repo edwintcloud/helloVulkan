@@ -66,6 +66,14 @@ private:
   VkDebugUtilsMessengerEXT debugMessenger;
 
   //-----------------------------------------------------------------
+  // HelloTriangleApplication - Private Member Substructures
+  //-----------------------------------------------------------------
+  struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+    bool isComplete() { return graphicsFamily.has_value(); }
+  };
+
+  //-----------------------------------------------------------------
   // HelloTriangleApplication - Static Methods
   //-----------------------------------------------------------------
 
@@ -88,4 +96,7 @@ private:
   bool checkValidationLayerSupport();
   void mainLoop();
   void cleanup();
+  void pickPhysicalDevice();
+  bool isDeviceSuitable(VkPhysicalDevice device);
+  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 };

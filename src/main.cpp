@@ -93,6 +93,7 @@ void HelloTriangleApplication::initWindow() {
 void HelloTriangleApplication::initVulkan() {
   createInstance();
   setupDebugMessenger();
+  pickPhysicalDevice();
 }
 
 // Sets up debug messenger extension.
@@ -245,6 +246,80 @@ void HelloTriangleApplication::cleanup() {
   vkDestroyInstance(instance, nullptr);
   glfwDestroyWindow(window);
   glfwTerminate();
+}
+
+// Selects a graphics device that supports needed features.
+void HelloTriangleApplication::pickPhysicalDevice() {
+  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+  uint32_t deviceCount = 0;
+  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+  if (deviceCount == 0) {
+    throw std::runtime_error("failed to find GPUs with Vulkan support!");
+  }
+
+  // create vector of available devices
+  std::vector<VkPhysicalDevice> devices(deviceCount);
+  vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+  // find the first suitable device
+  for (const VkPhysicalDevice &device : devices) {
+    if (isDeviceSuitable(device)) {
+      physicalDevice = device;
+      break;
+    }
+  }
+
+  // throw exception if no suitable device found
+  if (physicalDevice == VK_NULL_HANDLE) {
+    throw std::runtime_error("failed to find a suitable GPU!");
+  }
+}
+
+// Checks to see if a specified physical graphics device is suitable for the
+// application to use. ~Returns: true if device is suitable, false otherwise
+bool HelloTriangleApplication::isDeviceSuitable(VkPhysicalDevice device) {
+
+  // // get device properties
+  // VkPhysicalDeviceProperties deviceProperties;
+  // vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+  // // get device features
+  // VkPhysicalDeviceFeatures deviceFeatures;
+  // vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+  QueueFamilyIndices indices = findQueueFamilies(device);
+
+  return indices.isComplete();
+}
+
+// Looks up device queue families to ensure at least one supported
+// VK_QUEUE_GRAPHICS_BIT. ~Returns: QueueFamilyIndices struct with optional
+// graphicsFamily.
+HelloTriangleApplication::QueueFamilyIndices
+HelloTriangleApplication::findQueueFamilies(VkPhysicalDevice device) {
+  QueueFamilyIndices indices;
+
+  // retreive list of queue families
+  uint32_t queueFamilyCount = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
+                                           queueFamilies.data());
+
+  // find at least one queue family that supports VK_QUEUE_GRAPHICS_BIT
+  int i = 0;
+  for (const VkQueueFamilyProperties &queueFamily : queueFamilies) {
+    if (queueFamily.queueCount > 0 &&
+        queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+      indices.graphicsFamily = i;
+    }
+    if (indices.isComplete()) {
+      break;
+    }
+    i++;
+  }
+
+  return indices;
 }
 
 //-----------------------------------------------------------------
