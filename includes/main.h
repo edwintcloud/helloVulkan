@@ -24,6 +24,7 @@
 #include <cstring>
 #include <functional>
 #include <iostream>
+#include <set>
 #include <stdexcept>
 #include <vector>
 
@@ -67,13 +68,18 @@ private:
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   VkDevice device;
   VkQueue graphicsQueue;
+  VkQueue presentQueue;
+  VkSurfaceKHR surface;
 
   //-----------------------------------------------------------------
   // HelloTriangleApplication - Private Member Substructures
   //-----------------------------------------------------------------
   struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
-    bool isComplete() { return graphicsFamily.has_value(); }
+    std::optional<uint32_t> presentFamily;
+    bool isComplete() {
+      return graphicsFamily.has_value() && presentFamily.has_value();
+    }
   };
 
   //-----------------------------------------------------------------
@@ -103,4 +109,5 @@ private:
   bool isDeviceSuitable(VkPhysicalDevice device);
   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
   void createLogicalDevice();
+  void createSurface();
 };
