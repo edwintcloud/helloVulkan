@@ -1,6 +1,22 @@
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+//===================================================================
+// File: main.cpp
+//
+// Desc: Entrypoint of the program.
+//
+// Copyright © 2019 Edwin Cloud. All rights reserved.
+//===================================================================
 
+//-------------------------------------------------------------------
+// Hash Defines
+//-------------------------------------------------------------------
+
+#define GLFW_INCLUDE_VULKAN
+
+//-------------------------------------------------------------------
+// Includes
+//-------------------------------------------------------------------
+
+#include <GLFW/glfw3.h>
 #include <cstdlib>
 #include <cstring>
 #include <functional>
@@ -8,20 +24,28 @@
 #include <stdexcept>
 #include <vector>
 
-// window size constants
-const int WIDTH = 800;
-const int HEIGHT = 600;
+//-------------------------------------------------------------------
+// Conditional Global Constants
+//-------------------------------------------------------------------
 
-// validation layer constants
-const std::vector<const char *> validationLayers = {
-    "VK_LAYER_KHRONOS_validation"};
-
-// enable validation layers in debug only
 #ifndef _DEBUG
 const bool enableValidationLayers = false;
 #else
-const bool enableValidationLayers = true;
+const bool enableValidationLayers = true; // Debug Only
 #endif
+
+//-------------------------------------------------------------------
+// Global Constants
+//-------------------------------------------------------------------
+
+const int WIDTH = 800;  // GLFW Window Width
+const int HEIGHT = 600; // GLFW Window Height
+const std::vector<const char *> validationLayers = {
+    "VK_LAYER_KHRONOS_validation"};
+
+//-------------------------------------------------------------------
+// Global Functions
+//-------------------------------------------------------------------
 
 // ProxyFunc: get running proc address and register debug messenger extension
 VkResult CreateDebugUtilsMessengerEXT(
@@ -48,8 +72,16 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
   }
 }
 
+//-------------------------------------------------------------------
+// HelloTriangleApplication (Class)
+//-------------------------------------------------------------------
 class HelloTriangleApplication {
 public:
+  //-----------------------------------------------------------------
+  // HelloTriangleApplication - Public Functions
+  //-----------------------------------------------------------------
+
+  // Runs application.
   void run() {
     initWindow();
     initVulkan();
@@ -58,16 +90,19 @@ public:
   }
 
 private:
-  //---------------------------------------------------
-  // Private Member Variables
-  //---------------------------------------------------
+  //-----------------------------------------------------------------
+  // HelloTriangleApplication - Private Member Variables
+  //-----------------------------------------------------------------
   GLFWwindow *window;
   VkInstance instance;
   VkDebugUtilsMessengerEXT debugMessenger;
 
-  //---------------------------------------------------
-  // Static Member Functions
-  //---------------------------------------------------
+  //-----------------------------------------------------------------
+  // HelloTriangleApplication - Static Member Functions
+  //-----------------------------------------------------------------
+
+  // Prints validation layer debug messages to stdout.
+  // ~Returns: 0
   static VKAPI_ATTR VkBool32 VKAPI_CALL
   debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                 VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -78,9 +113,11 @@ private:
     return VK_FALSE;
   }
 
-  //---------------------------------------------------
-  // Private Member Functions
-  //---------------------------------------------------
+  //-----------------------------------------------------------------
+  // HelloTriangleApplication - Public Functions
+  //-----------------------------------------------------------------
+
+  // Initializes GLFW window.
   void initWindow() {
 
     // initialize glfw
@@ -94,11 +131,13 @@ private:
     window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
   }
 
+  // Initializes Vulkan instance.
   void initVulkan() {
     createInstance();
     setupDebugMessenger();
   }
 
+  // Sets up debug messenger extension.
   void setupDebugMessenger() {
     if (!enableValidationLayers)
       return;
@@ -122,6 +161,7 @@ private:
     }
   }
 
+  // Creates Vulkan instance.
   void createInstance() {
     // Check and make sure required validation layers are available
     // if in debug mode
@@ -175,6 +215,8 @@ private:
     }
   }
 
+  // Gets a list of required extensions needed.
+  // ~Returns: Vector of extensions.
   std::vector<const char *> getRequiredExtensions() {
     uint32_t glfwExtensionCount = 0;
     const char **glfwExtensions =
@@ -188,6 +230,7 @@ private:
     return extensions;
   }
 
+  // Gets a list of supported extensions.
   void checkSupportedExtensions() {
     uint32_t extensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -204,6 +247,9 @@ private:
     }
   }
 
+  // Check that configured validation layers are valid and supported.
+  // ~Returns: false if configured layer is not found in available layers, true
+  // otherwise.
   bool checkValidationLayerSupport() {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -228,12 +274,14 @@ private:
     return true;
   }
 
+  // Listens for events until GLFW window closes.
   void mainLoop() {
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
     }
   }
 
+  // Cleans up after GLFW window has been closed.
   void cleanup() {
     if (enableValidationLayers) {
       DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
@@ -244,15 +292,22 @@ private:
   }
 };
 
+//-----------------------------------------------------------------
+// Main Entrypoint
+//-----------------------------------------------------------------
 int main() {
+
+  // create instance of triangle app
   HelloTriangleApplication app;
 
+  // run the application -- safely checking for thrown exceptions
   try {
     app.run();
   } catch (const std::exception &e) {
     std::cerr << e.what() << std::endl;
-    return EXIT_FAILURE;
+    return EXIT_FAILURE; // return 1
   }
 
+  // return 0
   return EXIT_SUCCESS;
 }
