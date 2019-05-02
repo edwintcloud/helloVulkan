@@ -23,7 +23,7 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-// get running proc address and register debug messenger extension
+// ProxyFunc: get running proc address and register debug messenger extension
 VkResult CreateDebugUtilsMessengerEXT(
     VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
     const VkAllocationCallbacks *pAllocator,
@@ -34,6 +34,17 @@ VkResult CreateDebugUtilsMessengerEXT(
     return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
   } else {
     return VK_ERROR_EXTENSION_NOT_PRESENT;
+  }
+}
+
+// ProxyFunc: destroy debug messenger on program exit
+void DestroyDebugUtilsMessengerEXT(VkInstance instance,
+                                   VkDebugUtilsMessengerEXT debugMessenger,
+                                   const VkAllocationCallbacks *pAllocator) {
+  auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+      instance, "vkDestroyDebugUtilsMessengerEXT");
+  if (func != nullptr) {
+    func(instance, debugMessenger, pAllocator);
   }
 }
 
@@ -224,6 +235,9 @@ private:
   }
 
   void cleanup() {
+    if (enableValidationLayers) {
+      DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+    }
     vkDestroyInstance(instance, nullptr);
     glfwDestroyWindow(window);
     glfwTerminate();
