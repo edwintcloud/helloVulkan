@@ -4,6 +4,9 @@
 // Desc: Entrypoint of the program.
 //
 // Copyright © 2019 Edwin Cloud. All rights reserved.
+//
+// * Attribution to Alexander Overvoorde at vulkan-tutorial.com *
+// * for the general syntax, variable names and conventions.    *
 //===================================================================
 
 //-------------------------------------------------------------------
