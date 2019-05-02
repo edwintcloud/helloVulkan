@@ -94,6 +94,7 @@ void HelloTriangleApplication::initVulkan() {
   createInstance();
   setupDebugMessenger();
   pickPhysicalDevice();
+  createLogicalDevice();
 }
 
 // Sets up debug messenger extension.
@@ -240,6 +241,7 @@ void HelloTriangleApplication::mainLoop() {
 
 // Cleans up after GLFW window has been closed.
 void HelloTriangleApplication::cleanup() {
+  vkDestroyDevice(device, nullptr);
   if (enableValidationLayers) {
     DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
   }
@@ -250,7 +252,6 @@ void HelloTriangleApplication::cleanup() {
 
 // Selects a graphics device that supports needed features.
 void HelloTriangleApplication::pickPhysicalDevice() {
-  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
   if (deviceCount == 0) {
@@ -320,6 +321,53 @@ HelloTriangleApplication::findQueueFamilies(VkPhysicalDevice device) {
   }
 
   return indices;
+}
+
+void HelloTriangleApplication::createLogicalDevice() {
+  QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+
+  VkDeviceQueueCreateInfo queueCreateInfo = {};
+  queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+  queueCreateInfo.queueCount = 1;
+
+  // assign a queue priority to influence scheduling of command buffer execution
+  // (0.0f-1.0f)
+  float queuePriority = 1.0f;
+  queueCreateInfo.pQueuePriorities = &queuePriority;
+
+  // specify set of device features to use
+  VkPhysicalDeviceFeatures deviceFeatures = {};
+
+  // configure logical device
+  VkDeviceCreateInfo createInfo = {};
+  createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  createInfo.pQueueCreateInfos = &queueCreateInfo;
+  createInfo.queueCreateInfoCount = 1;
+  createInfo.pEnabledFeatures = &deviceFeatures;
+  createInfo.enabledExtensionCount = 0;
+
+  // enable validation layers if in debug
+  // in newer versions of Vulkan these settings are completely ignored for
+  // logical devices, however older versions of Vulkan supported this so these
+  // settings are for backwards compatibility with previous versions
+  if (enableValidationLayers) {
+    createInfo.enabledLayerCount =
+        static_cast<uint32_t>(validationLayers.size());
+    createInfo.ppEnabledLayerNames = validationLayers.data();
+  } else {
+    createInfo.enabledLayerCount = 0;
+  }
+
+  // create the logical device, or throw exception
+  if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("failed to create logical device!");
+  }
+
+  // retreive queue handles for single queue family with logical device -
+  // this essentially registers a graphics queue with the logical devices
+  vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
 }
 
 //-----------------------------------------------------------------
