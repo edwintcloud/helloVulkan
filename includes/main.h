@@ -20,6 +20,7 @@
 //-------------------------------------------------------------------
 
 #include <GLFW/glfw3.h>
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <functional>
@@ -123,4 +124,7 @@ private:
   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
   VkSurfaceFormatKHR chooseSwapSurfaceFormat(
       const std::vector<VkSurfaceFormatKHR> &availableFormats);
+  VkPresentModeKHR chooseSwapPresentMode(
+      const std::vector<VkPresentModeKHR> &availablePresentModes);
+  VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
 };

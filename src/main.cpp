@@ -487,6 +487,45 @@ VkSurfaceFormatKHR chooseSwapSurfaceFormat(
   return availableFormats[0];
 }
 
+// Returns an appropriate swap presentation mode.
+VkPresentModeKHR chooseSwapPresentMode(
+    const std::vector<VkPresentModeKHR> &availablePresentModes) {
+  // FIFO is a first-in-first out queue mode (basically vertical sync)
+  VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
+
+  // try to use triple-buffering, or fallback to immediate rendering for
+  // compatibility
+  for (const auto &availablePresentMode : availablePresentModes) {
+    if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+      return availablePresentMode;
+    } else if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+      bestMode = availablePresentMode;
+    }
+  }
+
+  return bestMode;
+}
+
+// Returns the best resolution of images for the swap chain based on current
+// window size.
+VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities) {
+  if (capabilities.currentExtent.width !=
+      std::numeric_limits<uint32_t>::max()) {
+    return capabilities.currentExtent;
+  } else {
+    VkExtent2D actualExtent = {WIDTH, HEIGHT};
+
+    actualExtent.width = std::max(
+        capabilities.minImageExtent.width,
+        std::min(capabilities.minImageExtent.width, actualExtent.width));
+    actualExtent.height = std::max(
+        capabilities.minImageExtent.height,
+        std::min(capabilities.minImageExtent.height, actualExtent.height));
+
+    return actualExtent;
+  }
+}
+
 //-----------------------------------------------------------------
 // Main Function of Application
 //-----------------------------------------------------------------
