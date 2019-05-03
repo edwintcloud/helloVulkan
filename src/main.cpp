@@ -293,7 +293,16 @@ bool HelloTriangleApplication::isDeviceSuitable(VkPhysicalDevice device) {
 
   QueueFamilyIndices indices = findQueueFamilies(device);
 
-  return indices.isComplete();
+  bool extensionsSupported = checkDeviceExtensionSupport(device);
+
+  bool swapChainAdequate = false;
+  if (extensionsSupported) {
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+    swapChainAdequate = !swapChainSupport.formats.empty() &&
+                        !swapChainSupport.presentModes.empty();
+  }
+
+  return indices.isComplete() && extensionsSupported && swapChainAdequate;
 }
 
 // Looks up device queue families to ensure at least one supported
@@ -332,6 +341,7 @@ HelloTriangleApplication::findQueueFamilies(VkPhysicalDevice device) {
   return indices;
 }
 
+// Creates a logical device using the available physical graphics device.
 void HelloTriangleApplication::createLogicalDevice() {
   QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
@@ -361,7 +371,9 @@ void HelloTriangleApplication::createLogicalDevice() {
   createInfo.queueCreateInfoCount =
       static_cast<uint32_t>(queueCreateInfos.size());
   createInfo.pEnabledFeatures = &deviceFeatures;
-  createInfo.enabledExtensionCount = 0;
+  createInfo.enabledExtensionCount =
+      static_cast<uint32_t>(deviceExtensions.size());
+  createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
   // enable validation layers if in debug
   // in newer versions of Vulkan these settings are completely ignored for
@@ -396,6 +408,83 @@ void HelloTriangleApplication::createSurface() {
       VK_SUCCESS) {
     throw std::runtime_error("failed to create window surface!");
   }
+}
+
+// Checks that required extensions are available to be used by the physical
+// graphics device.
+// ~Returns: true if all required extensions are available, false otherwise.
+bool HelloTriangleApplication::checkDeviceExtensionSupport(
+    VkPhysicalDevice device) {
+  uint32_t extensionCount;
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+                                       nullptr);
+
+  std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+                                       availableExtensions.data());
+
+  std::set<std::string> requiredExtensions(deviceExtensions.begin(),
+                                           deviceExtensions.end());
+
+  for (const VkExtensionProperties &extension : availableExtensions) {
+    requiredExtensions.erase(extension.extensionName);
+  }
+
+  return requiredExtensions.empty();
+
+  return true;
+}
+
+// Queries device for supported swap chain details.
+// ~Returns: SwapChainSupportDetails struct with swap chain support details.
+HelloTriangleApplication::SwapChainSupportDetails
+HelloTriangleApplication::querySwapChainSupport(VkPhysicalDevice device) {
+  SwapChainSupportDetails details;
+
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
+                                            &details.capabilities);
+
+  // query surface formats(color depth)
+  uint32_t formatCount;
+  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+
+  if (formatCount != 0) {
+    details.formats.resize(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
+                                         details.formats.data());
+  }
+
+  // query presentation modes(conditions for "swapping" images to the screen)
+  uint32_t presentModeCount;
+  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount,
+                                            nullptr);
+
+  if (presentModeCount != 0) {
+    details.presentModes.resize(presentModeCount);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+        device, surface, &presentModeCount, details.presentModes.data());
+  }
+
+  return details;
+}
+
+// Returns an appropriate surface format for the swap chain.
+VkSurfaceFormatKHR chooseSwapSurfaceFormat(
+    const std::vector<VkSurfaceFormatKHR> &availableFormats) {
+
+  if (availableFormats.size() == 1 &&
+      availableFormats[0].format == VK_FORMAT_UNDEFINED) {
+    return {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+  }
+
+  for (const auto &availableFormat : availableFormats) {
+    if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
+        availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      return availableFormat;
+    }
+  }
+
+  return availableFormats[0];
 }
 
 //-----------------------------------------------------------------
