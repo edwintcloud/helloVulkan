@@ -96,6 +96,7 @@ void HelloTriangleApplication::initVulkan() {
   createSurface();
   pickPhysicalDevice();
   createLogicalDevice();
+  createSwapChain();
 }
 
 // Sets up debug messenger extension.
@@ -242,6 +243,7 @@ void HelloTriangleApplication::mainLoop() {
 
 // Cleans up after GLFW window has been closed.
 void HelloTriangleApplication::cleanup() {
+  vkDestroySwapchainKHR(device, swapChain, nullptr);
   vkDestroyDevice(device, nullptr);
   if (enableValidationLayers) {
     DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
@@ -469,7 +471,7 @@ HelloTriangleApplication::querySwapChainSupport(VkPhysicalDevice device) {
 }
 
 // Returns an appropriate surface format for the swap chain.
-VkSurfaceFormatKHR chooseSwapSurfaceFormat(
+VkSurfaceFormatKHR HelloTriangleApplication::chooseSwapSurfaceFormat(
     const std::vector<VkSurfaceFormatKHR> &availableFormats) {
 
   if (availableFormats.size() == 1 &&
@@ -488,7 +490,7 @@ VkSurfaceFormatKHR chooseSwapSurfaceFormat(
 }
 
 // Returns an appropriate swap presentation mode.
-VkPresentModeKHR chooseSwapPresentMode(
+VkPresentModeKHR HelloTriangleApplication::chooseSwapPresentMode(
     const std::vector<VkPresentModeKHR> &availablePresentModes) {
   // FIFO is a first-in-first out queue mode (basically vertical sync)
   VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -508,7 +510,8 @@ VkPresentModeKHR chooseSwapPresentMode(
 
 // Returns the best resolution of images for the swap chain based on current
 // window size.
-VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities) {
+VkExtent2D HelloTriangleApplication::chooseSwapExtent(
+    const VkSurfaceCapabilitiesKHR &capabilities) {
   if (capabilities.currentExtent.width !=
       std::numeric_limits<uint32_t>::max()) {
     return capabilities.currentExtent;
@@ -523,6 +526,70 @@ VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities) {
         std::min(capabilities.minImageExtent.height, actualExtent.height));
 
     return actualExtent;
+  }
+}
+
+void HelloTriangleApplication::createSwapChain() {
+  SwapChainSupportDetails swapChainSupport =
+      querySwapChainSupport(physicalDevice);
+
+  VkSurfaceFormatKHR surfaceFormat =
+      chooseSwapSurfaceFormat(swapChainSupport.formats);
+  VkPresentModeKHR presentMode =
+      chooseSwapPresentMode(swapChainSupport.presentModes);
+  VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
+
+  // min number of images for swap chain buffering
+  uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+  if (swapChainSupport.capabilities.maxImageCount > 0 &&
+      imageCount > swapChainSupport.capabilities.maxImageCount) {
+    imageCount = swapChainSupport.capabilities.maxImageCount;
+  }
+
+  // configure swap chain
+  VkSwapchainCreateInfoKHR createInfo = {};
+  createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  createInfo.surface = surface;
+  createInfo.minImageCount = imageCount;
+  createInfo.imageFormat = surfaceFormat.format;
+  createInfo.imageColorSpace = surfaceFormat.colorSpace;
+  createInfo.imageExtent = extent;
+  createInfo.imageArrayLayers = 1;
+  createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+  // specify how to handle swap chain images used across multiple queue families
+  // (ie. graphics family queue is different from presentation queue)
+  QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+  uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(),
+                                   indices.presentFamily.value()};
+  if (indices.graphicsFamily != indices.presentFamily) {
+    createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    createInfo.queueFamilyIndexCount = 2;
+    createInfo.pQueueFamilyIndices = queueFamilyIndices;
+  } else {
+    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    createInfo.queueFamilyIndexCount = 0;
+    createInfo.pQueueFamilyIndices = nullptr;
+  }
+
+  // apply transformations if supported
+  createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+
+  // ignore alpha channel for blending with other windows
+  createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+
+  // set present mode and enable clipping for images that go outside the window
+  createInfo.presentMode = presentMode;
+  createInfo.clipped = VK_TRUE;
+
+  // in case window in resizes, recreate swap chain (pass in handle of null as
+  // old swap chain)
+  createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+  // create the swap chain
+  if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("unable to create swap chain!");
   }
 }
 
