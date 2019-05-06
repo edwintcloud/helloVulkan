@@ -97,6 +97,7 @@ void HelloTriangleApplication::initVulkan() {
   pickPhysicalDevice();
   createLogicalDevice();
   createSwapChain();
+  createImageViews();
 }
 
 // Sets up debug messenger extension.
