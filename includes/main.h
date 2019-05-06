@@ -77,6 +77,7 @@ private:
   std::vector<VkImage> swapChainImages;
   VkFormat swapChainImageFormat;
   VkExtent2D swapChainExtent;
+  std::vector<VkImageView> swapChainImageViews;
 
   //-----------------------------------------------------------------
   // HelloTriangleApplication - Private Member Substructures
@@ -132,4 +133,5 @@ private:
       const std::vector<VkPresentModeKHR> &availablePresentModes);
   VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
   void createSwapChain();
+  void createImageViews();
 };

@@ -243,6 +243,9 @@ void HelloTriangleApplication::mainLoop() {
 
 // Cleans up after GLFW window has been closed.
 void HelloTriangleApplication::cleanup() {
+  for (auto imageView : swapChainImageViews) {
+    vkDestroyImageView(device, imageView, nullptr);
+  }
   vkDestroySwapchainKHR(device, swapChain, nullptr);
   vkDestroyDevice(device, nullptr);
   if (enableValidationLayers) {
@@ -529,6 +532,7 @@ VkExtent2D HelloTriangleApplication::chooseSwapExtent(
   }
 }
 
+// Creates the swap chain to store a buffer of images to be rendered.
 void HelloTriangleApplication::createSwapChain() {
   SwapChainSupportDetails swapChainSupport =
       querySwapChainSupport(physicalDevice);
@@ -601,6 +605,40 @@ void HelloTriangleApplication::createSwapChain() {
   // set swap chain image format and extent
   swapChainImageFormat = surfaceFormat.format;
   swapChainExtent = extent;
+}
+
+// Creates an image view from the created swap chain so we can access the images
+// from the render pipeline.
+void HelloTriangleApplication::createImageViews() {
+
+  // resize images view vector to size of swap chain images vector
+  swapChainImageViews.resize(swapChainImages.size());
+
+  // iterate through swap chain images, creating an image view for each image
+  for (size_t i = 0; i < swapChainImages.size(); i++) {
+
+    // configure new image view
+    VkImageViewCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    createInfo.image = swapChainImages[i];
+    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    createInfo.format = swapChainImageFormat;
+    createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    createInfo.subresourceRange.baseMipLevel = 0;
+    createInfo.subresourceRange.levelCount = 1;
+    createInfo.subresourceRange.baseArrayLayer = 0;
+    createInfo.subresourceRange.layerCount = 1;
+
+    // create new image view
+    if (vkCreateImageView(device, &createInfo, nullptr,
+                          &swapChainImageViews[i]) != VK_SUCCESS) {
+      std::runtime_error("failed to create image views!");
+    }
+  }
 }
 
 //-----------------------------------------------------------------
