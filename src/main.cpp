@@ -858,6 +858,7 @@ HelloTriangleApplication::createShaderModule(const std::vector<char> &code) {
   return shaderModule;
 }
 
+// Creates the render pass.
 void HelloTriangleApplication::createRenderPass() {
   // configure attachment description
   VkAttachmentDescription colorAttachment = {};
