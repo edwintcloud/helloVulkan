@@ -71,6 +71,31 @@ VKAPI_ATTR VkBool32 VKAPI_CALL HelloTriangleApplication::debugCallback(
   return VK_FALSE;
 }
 
+// Reads a binary and returns a buffer of type
+// std::vector<char>.
+std::vector<char>
+HelloTriangleApplication::readFile(const std::string &filename) {
+  // start reading at end of file and read as binary
+  std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+  // throw error if file wasn't successfully opened
+  if (!file.is_open()) {
+    throw std::runtime_error("failed to open file!");
+  }
+
+  // create a buffer to hold the file
+  size_t fileSize = (size_t)file.tellg();
+  std::vector<char> buffer(fileSize);
+
+  // seek to beginning of file and read file into buffer
+  file.seekg(0);
+  file.read(buffer.data(), fileSize);
+
+  // close file and return the buffer
+  file.close();
+  return buffer;
+}
+
 //-----------------------------------------------------------------
 // HelloTriangleApplication (Private Class Methods)
 //-----------------------------------------------------------------
@@ -98,6 +123,7 @@ void HelloTriangleApplication::initVulkan() {
   createLogicalDevice();
   createSwapChain();
   createImageViews();
+  createGraphicsPipeline();
 }
 
 // Sets up debug messenger extension.
@@ -640,6 +666,61 @@ void HelloTriangleApplication::createImageViews() {
       std::runtime_error("failed to create image views!");
     }
   }
+}
+
+// Creates the graphics pipeline.
+void HelloTriangleApplication::createGraphicsPipeline() {
+  // loader shaders
+  auto vertexShaderCode = readFile("shaders/vert.spv");
+  auto fragShaderCode = readFile("shaders/frag.spv");
+
+  // create shader modules
+  VkShaderModule vertShaderModule = createShaderModule(vertexShaderCode);
+  VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+
+  // cleanup shader modules
+  vkDestroyShaderModule(device, fragShaderModule, nullptr);
+  vkDestroyShaderModule(device, fragShaderModule, nullptr);
+
+  // configure vertex shader stage
+  VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
+  vertShaderStageInfo.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+  vertShaderStageInfo.module = vertShaderModule;
+  vertShaderStageInfo.pName = "main"; // function to invoke in the shader code
+
+  // configure fragment shader stage
+  VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
+  fragShaderStageInfo.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+  fragShaderStageInfo.module = fragShaderModule;
+  fragShaderStageInfo.pName = "main";
+
+  // combine shader stages into an array of stages
+  VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo,
+                                                    fragShaderStageInfo};
+}
+
+// Creates and returns a shader module from given shader buffer.
+VkShaderModule
+HelloTriangleApplication::createShaderModule(const std::vector<char> &code) {
+  // configure shader module
+  VkShaderModuleCreateInfo createInfo = {};
+  createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  createInfo.codeSize = code.size();
+  createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
+
+  // create shader module
+  VkShaderModule shaderModule;
+  if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("unable to create shader module!");
+  }
+
+  // return created shader module
+  return shaderModule;
 }
 
 //-----------------------------------------------------------------

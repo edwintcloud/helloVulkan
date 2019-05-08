@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <set>
@@ -106,6 +107,7 @@ private:
                 VkDebugUtilsMessageTypeFlagsEXT messageType,
                 const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                 void *pUserData);
+  static std::vector<char> readFile(const std::string &filename);
 
   //-----------------------------------------------------------------
   // HelloTriangleApplication - Private Methods
@@ -134,4 +136,6 @@ private:
   VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
   void createSwapChain();
   void createImageViews();
+  void createGraphicsPipeline();
+  VkShaderModule createShaderModule(const std::vector<char> &code);
 };
