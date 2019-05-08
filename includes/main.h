@@ -80,6 +80,8 @@ private:
   VkExtent2D swapChainExtent;
   std::vector<VkImageView> swapChainImageViews;
   VkPipelineLayout pipelineLayout;
+  VkRenderPass renderPass;
+  VkPipeline graphicsPipeline;
 
   //-----------------------------------------------------------------
   // HelloTriangleApplication - Private Member Substructures
@@ -139,4 +141,5 @@ private:
   void createImageViews();
   void createGraphicsPipeline();
   VkShaderModule createShaderModule(const std::vector<char> &code);
+  void createRenderPass();
 };
