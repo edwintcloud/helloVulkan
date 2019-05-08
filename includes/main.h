@@ -79,6 +79,7 @@ private:
   VkFormat swapChainImageFormat;
   VkExtent2D swapChainExtent;
   std::vector<VkImageView> swapChainImageViews;
+  VkPipelineLayout pipelineLayout;
 
   //-----------------------------------------------------------------
   // HelloTriangleApplication - Private Member Substructures
