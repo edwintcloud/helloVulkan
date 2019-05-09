@@ -125,6 +125,9 @@ void HelloTriangleApplication::initVulkan() {
   createImageViews();
   createRenderPass();
   createGraphicsPipeline();
+  createFrameBuffers();
+  createCommandPool();
+  createCommandBuffers();
 }
 
 // Sets up debug messenger extension.
@@ -266,11 +269,16 @@ bool HelloTriangleApplication::checkValidationLayerSupport() {
 void HelloTriangleApplication::mainLoop() {
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
+    drawFrame();
   }
 }
 
 // Cleans up after GLFW window has been closed.
 void HelloTriangleApplication::cleanup() {
+  vkDestroyCommandPool(device, commandPool, nullptr);
+  for (auto framebuffer : swapChainFrameBuffers) {
+    vkDestroyFramebuffer(device, framebuffer, nullptr);
+  }
   vkDestroyPipeline(device, graphicsPipeline, nullptr);
   vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
   vkDestroyRenderPass(device, renderPass, nullptr);
@@ -905,6 +913,103 @@ void HelloTriangleApplication::createRenderPass() {
     throw std::runtime_error("failed to create render pass!");
   }
 }
+
+// Creates framebuffers from swap chain image views.
+void HelloTriangleApplication::createFrameBuffers() {
+  swapChainFrameBuffers.resize(swapChainImageViews.size());
+
+  // create frambuffer for each imageview in swap chain
+  for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+    VkImageView attachments[] = {swapChainImageViews[i]};
+    VkFramebufferCreateInfo framebufferInfo = {};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = renderPass;
+    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.pAttachments = attachments;
+    framebufferInfo.width = swapChainExtent.width;
+    framebufferInfo.height = swapChainExtent.height;
+    framebufferInfo.layers = 1;
+
+    if (vkCreateFramebuffer(device, &framebufferInfo, nullptr,
+                            &swapChainFrameBuffers[i]) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create framebuffer!");
+    }
+  }
+}
+
+// Creates command pools to manage the command buffers for drawing objects on
+// the screen.
+void HelloTriangleApplication::createCommandPool() {
+  QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
+
+  VkCommandPoolCreateInfo poolInfo = {};
+  poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+  poolInfo.flags = 0;
+
+  if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("failed to create command pool!");
+  }
+}
+
+// Creates command buffers which are commands to draw on the screen.
+void HelloTriangleApplication::createCommandBuffers() {
+  commandBuffers.resize(swapChainFrameBuffers.size());
+
+  // allocate command buffers
+  VkCommandBufferAllocateInfo allocInfo = {};
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.commandPool = commandPool;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
+  if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("failed to allocate command buffers!");
+  }
+
+  // begin recording a command buffer
+  for (size_t i = 0; i < commandBuffers.size(); i++) {
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    beginInfo.pInheritanceInfo = nullptr;
+
+    if (vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS) {
+      throw std::runtime_error("failed to begin recording command buffer!");
+    }
+
+    // start a render pass
+    VkRenderPassBeginInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass;
+    renderPassInfo.framebuffer = swapChainFrameBuffers[i];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = swapChainExtent;
+    VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+    vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo,
+                         VK_SUBPASS_CONTENTS_INLINE);
+
+    // bind to graphics pipeline
+    vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      graphicsPipeline);
+
+    // draw a triangle
+    vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+
+    // end the render pass
+    vkCmdEndRenderPass(commandBuffers[i]);
+
+    // close the command buffer
+    if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
+      throw std::runtime_error("failed to record command buffer!");
+    }
+  }
+}
+
+void HelloTriangleApplication::drawFrame() {}
 
 //-----------------------------------------------------------------
 // Main Function of Application

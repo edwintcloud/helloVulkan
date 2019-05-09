@@ -82,6 +82,9 @@ private:
   VkPipelineLayout pipelineLayout;
   VkRenderPass renderPass;
   VkPipeline graphicsPipeline;
+  std::vector<VkFramebuffer> swapChainFrameBuffers;
+  VkCommandPool commandPool;
+  std::vector<VkCommandBuffer> commandBuffers;
 
   //-----------------------------------------------------------------
   // HelloTriangleApplication - Private Member Substructures
@@ -142,4 +145,8 @@ private:
   void createGraphicsPipeline();
   VkShaderModule createShaderModule(const std::vector<char> &code);
   void createRenderPass();
+  void createFrameBuffers();
+  void createCommandPool();
+  void createCommandBuffers();
+  void drawFrame();
 };
