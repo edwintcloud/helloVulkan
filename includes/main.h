@@ -85,6 +85,8 @@ private:
   std::vector<VkFramebuffer> swapChainFrameBuffers;
   VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
+  VkSemaphore imageAvailableSemaphore;
+  VkSemaphore renderFinishedSemaphore;
 
   //-----------------------------------------------------------------
   // HelloTriangleApplication - Private Member Substructures
@@ -149,4 +151,5 @@ private:
   void createCommandPool();
   void createCommandBuffers();
   void drawFrame();
+  void createSemaphores();
 };
