@@ -128,7 +128,7 @@ void HelloTriangleApplication::initVulkan() {
   createFrameBuffers();
   createCommandPool();
   createCommandBuffers();
-  createSemaphores();
+  createSyncObjects();
 }
 
 // Sets up debug messenger extension.
@@ -277,8 +277,11 @@ void HelloTriangleApplication::mainLoop() {
 
 // Cleans up after GLFW window has been closed.
 void HelloTriangleApplication::cleanup() {
-  vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-  vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+    vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+    vkDestroyFence(device, inFlightFences[i], nullptr);
+  }
   vkDestroyCommandPool(device, commandPool, nullptr);
   for (auto framebuffer : swapChainFrameBuffers) {
     vkDestroyFramebuffer(device, framebuffer, nullptr);
@@ -1025,28 +1028,46 @@ void HelloTriangleApplication::createCommandBuffers() {
   }
 }
 
-void HelloTriangleApplication::createSemaphores() {
+void HelloTriangleApplication::createSyncObjects() {
+  imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+  renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+  inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
   VkSemaphoreCreateInfo semaphoreInfo = {};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
+  VkFenceCreateInfo fenceInfo = {};
+  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
   // create semaphores
-  if (vkCreateSemaphore(device, &semaphoreInfo, nullptr,
-                        &imageAvailableSemaphore) != VK_SUCCESS ||
-      vkCreateSemaphore(device, &semaphoreInfo, nullptr,
-                        &renderFinishedSemaphore) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create semaphores!");
+  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    if (vkCreateSemaphore(device, &semaphoreInfo, nullptr,
+                          &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+        vkCreateSemaphore(device, &semaphoreInfo, nullptr,
+                          &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+        vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) !=
+            VK_SUCCESS) {
+      throw std::runtime_error(
+          "failed to create synchronization objects for a frame!");
+    }
   }
 }
 
 void HelloTriangleApplication::drawFrame() {
+  vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE,
+                  std::numeric_limits<uint64_t>::max());
+  vkResetFences(device, 1, &inFlightFences[currentFrame]);
+
   uint32_t imageIndex;
   vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(),
-                        imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+                        imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE,
+                        &imageIndex);
 
   // configure frame submission info
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
+  VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
   VkPipelineStageFlags waitStages[] = {
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
   submitInfo.waitSemaphoreCount = 1;
@@ -1054,13 +1075,13 @@ void HelloTriangleApplication::drawFrame() {
   submitInfo.pWaitDstStageMask = waitStages;
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
-  VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
+  VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = signalSemaphores;
 
   // submit command buffer to graphics queue
-  if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
-      VK_SUCCESS) {
+  if (vkQueueSubmit(graphicsQueue, 1, &submitInfo,
+                    inFlightFences[currentFrame]) != VK_SUCCESS) {
     throw std::runtime_error("failed to submit draw command buffer!");
   }
 
@@ -1078,7 +1099,11 @@ void HelloTriangleApplication::drawFrame() {
   // present images to window
   vkQueuePresentKHR(presentQueue, &presentInfo);
 
+  // wait for work to finish after submitting it
   vkQueueWaitIdle(presentQueue);
+
+  // advance frame
+  currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 //-----------------------------------------------------------------

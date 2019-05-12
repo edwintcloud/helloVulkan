@@ -50,6 +50,7 @@ const std::vector<const char *> validationLayers = {
     "VK_LAYER_KHRONOS_validation"};
 const std::vector<const char *> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+const int MAX_FRAMES_IN_FLIGHT = 2;
 
 //-------------------------------------------------------------------
 // HelloTriangleApplication (Class Definition)
@@ -85,8 +86,10 @@ private:
   std::vector<VkFramebuffer> swapChainFrameBuffers;
   VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
-  VkSemaphore imageAvailableSemaphore;
-  VkSemaphore renderFinishedSemaphore;
+  std::vector<VkSemaphore> imageAvailableSemaphores;
+  std::vector<VkSemaphore> renderFinishedSemaphores;
+  size_t currentFrame = 0;
+  std::vector<VkFence> inFlightFences;
 
   //-----------------------------------------------------------------
   // HelloTriangleApplication - Private Member Substructures
@@ -151,5 +154,5 @@ private:
   void createCommandPool();
   void createCommandBuffers();
   void drawFrame();
-  void createSemaphores();
+  void createSyncObjects();
 };
