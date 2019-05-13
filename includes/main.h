@@ -90,6 +90,7 @@ private:
   std::vector<VkSemaphore> renderFinishedSemaphores;
   size_t currentFrame = 0;
   std::vector<VkFence> inFlightFences;
+  bool framebufferResized = false;
 
   //-----------------------------------------------------------------
   // HelloTriangleApplication - Private Member Substructures
@@ -119,6 +120,8 @@ private:
                 const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                 void *pUserData);
   static std::vector<char> readFile(const std::string &filename);
+  static void framebufferResizeCallback(GLFWwindow *window, int width,
+                                        int height);
 
   //-----------------------------------------------------------------
   // HelloTriangleApplication - Private Methods
@@ -155,4 +158,6 @@ private:
   void createCommandBuffers();
   void drawFrame();
   void createSyncObjects();
+  void recreateSwapChain();
+  void cleanupSwapChain();
 };
